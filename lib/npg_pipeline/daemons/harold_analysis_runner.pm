@@ -4,12 +4,14 @@ use Moose;
 use MooseX::ClassAttribute;
 use Moose::Meta::Class;
 use Carp;
-use English qw{-no_match_vars};
+use English qw/-no_match_vars/;
 use List::MoreUtils  qw/none/;
+use FindBin qw/$Bin/;
 use Readonly;
 
 use npg_tracking::illumina::run::folder::location;
 use npg_tracking::illumina::run::short_info;
+use npg_tracking::util::abs_path qw/abs_path/;
 use WTSI::DNAP::Warehouse::Schema;
 use WTSI::DNAP::Warehouse::Schema::Query::IseqFlowcell;
 
@@ -53,10 +55,10 @@ sub _build_green_host {
   my $datacentre = `machine-location|grep datacentre`;
   if ($datacentre) {
     $self->log(qq{Running in $datacentre});
-  } else {
-    $self->log(q{Do not know what datacentre I am running in});
+    return ($datacentre && $datacentre =~ /$GREEN_DATACENTRE/xms) ? 1 : 0;
   }
-  return ($datacentre && $datacentre =~ /$GREEN_DATACENTRE/xms);
+  $self->log(q{Do not know what datacentre I am running in});
+  return;
 }
 
 has 'iseq_flowcell' => (
@@ -114,12 +116,17 @@ sub runs_with_status {
 
 sub staging_host_match {
   my ($self, $folder_path_glob) = @_;
-  if ($folder_path_glob) {
-    return $self->green_host ^ none { $folder_path_glob =~ m{/$_/}smx } @GREEN_STAGING;
-  } else {
-    croak q[Need folder_path_glob to decide whether the run folder and daemon host are co-located];
+
+  my $match = 1;
+
+  if (defined $self->green_host) {
+    if (!$folder_path_glob) {
+      croak q[Need folder_path_glob to decide whether the run folder and the daemon host are co-located];
+    }
+    $match =  $self->green_host ^ none { $folder_path_glob =~ m{/$_/}smx } @GREEN_STAGING;
   }
-  return;
+
+  return $match;
 }
 
 sub _process_one_run {
@@ -193,10 +200,12 @@ sub _runfolder_path {
   );
   $class->add_attribute(q(npg_tracking_schema),{isa => 'npg_tracking::Schema', is=>q(ro)});
 
-  return $class->new_object(
+  my $path = $class->new_object(
     npg_tracking_schema => $self->npg_tracking_schema,
     id_run              => $id_run,
   )->runfolder_path;
+
+  return abs_path($path);
 }
 
 sub _generate_command {
@@ -208,29 +217,49 @@ sub _generate_command {
              $arg_refs->{'rf_path'};
 
   if ( $arg_refs->{'gclp'} ) {
-    $cmd .= ' --function_list gclp';
+    $self->log('GCLP run');
+    $cmd .= ' --function_list gclp --force_p4';
   } elsif ( $arg_refs->{'id'} ) {
+    $self->log('Non-GCLP run');
     $cmd .= ' --id_flowcell_lims ' . $arg_refs->{'id'};
   }
 
-  my $path = join q[:], $self->local_path(), $ENV{PATH};
+  my $path = join q[:], $self->local_path(), $ENV{'PATH'};
   my $prefix = $self->daemon_conf()->{'command_prefix'};
   if (not defined $prefix) { $prefix=q(); }
   $cmd = qq{export PATH=$path; $prefix$cmd};
   return $cmd;
 }
 
-# run the command generated
 sub run_command {
   my ( $self, $id_run, $cmd ) = @_;
+
+  $self->log(qq{COMMAND: $cmd});
   my $output = `$cmd`;
+
   if ( $CHILD_ERROR ) {
-    $self->log( qq{Error $CHILD_ERROR occured. Will try $id_run again on next loop.});
+    $self->log(qq{Error $CHILD_ERROR occured. Will try $id_run again on next loop.});
   }else{
-    $self->log(qq{Output:\n$output});
     $self->seen->{$id_run}++; # you have now seen this
   }
+
+  if ($output) {
+    $self->log(qq{Output:$output});
+  }
+
   return;
+}
+
+=head2 local_path
+
+ a list with a path to bin the code is running from and perl executable the code is running under
+
+=cut
+sub local_path {
+  my $perl_path = "$EXECUTABLE_NAME";
+  $perl_path =~ s/\/perl$//xms;
+  my @paths = map { abs_path($_) } ($Bin, $perl_path);
+  return @paths;
 }
 
 no Moose;
@@ -267,6 +296,10 @@ starts the pipeline for each of them.
 
 =head2 check_lims_link
 
+=head2 local_path
+
+ returns list with paths to bin the code is running from and perl executable the code is running under
+
 =head1 DIAGNOSTICS
 
 =head1 CONFIGURATION AND ENVIRONMENT
@@ -281,6 +314,8 @@ starts the pipeline for each of them.
 
 =item Carp
 
+=item FindBin
+
 =item English -no_match_vars
 
 =item List::MoreUtils
@@ -293,9 +328,11 @@ starts the pipeline for each of them.
 
 =item npg_tracking::illumina::run::short_info
 
+=item use npg_tracking::util::abs_path
+
 =item WTSI::DNAP::Warehouse::Schema
 
-item WTSI::DNAP::Warehouse::Schema::Query::IseqFlowcell
+=item WTSI::DNAP::Warehouse::Schema::Query::IseqFlowcell
 
 =back
 

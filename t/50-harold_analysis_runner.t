@@ -66,7 +66,7 @@ package main;
     rf_path      => $rf_path,
     job_priority => 50,
     gclp         => 1,
-  } ), qr/npg_pipeline_central --verbose --job_priority 50 --runfolder_path $rf_path --function_list gclp/,
+  } ), qr/npg_pipeline_central --verbose --job_priority 50 --runfolder_path $rf_path --function_list gclp --force_p4/,
     q{generated command is correct});
 
   like($runner->_generate_command( {
@@ -74,15 +74,15 @@ package main;
     job_priority => 50,
     gclp         => 1,
     id           => 22,
-  } ), qr/npg_pipeline_central --verbose --job_priority 50 --runfolder_path $rf_path --function_list gclp/,
+  } ), qr/npg_pipeline_central --verbose --job_priority 50 --runfolder_path $rf_path --function_list gclp --force_p4/,
     q{generated command is correct});
 
 
-  ok($runner->green_host, 'running on a host in a green datacentre');
+  ok($runner->green_host,'running on a host in a green datacentre');
   ok($runner->staging_host_match($path49), 'staging matches host');
   ok(!$runner->staging_host_match($path32), 'staging does not match host');
   throws_ok {$runner->staging_host_match()}
-    qr/Need folder_path_glob to decide whether the run folder and daemon host are co-located/,
+    qr/Need folder_path_glob to decide whether the run folder and the daemon host are co-located/,
     'error if folder_path_glob is not defined';
   ok(!$runner->staging_host_match($folder_path_glob), 'staging does not match host for a test run');
   
@@ -204,7 +204,7 @@ package main;
   ok (!exists $lims_data->{'message'}, 'no message');
   is ($lims_data->{'gclp'}, 0, 'gclp flag is set to false');
 
-  $wh_schema->resultset('IseqFlowcell')->search()->update({'id_lims' => 'CLARITY-GCLP'});
+  $wh_schema->resultset('IseqFlowcell')->search()->update({'id_lims' => 'C_GCLP'});
 
   $lims_data = $runner->check_lims_link($test_run);
   is ($lims_data->{'gclp'}, 0, 'gclp flag is set to false');

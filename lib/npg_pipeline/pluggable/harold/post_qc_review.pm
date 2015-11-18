@@ -44,6 +44,26 @@ sub archive_to_irods {
   return @job_ids;
 }
 
+=head2 archive_logs
+
+upload all log files to irods
+
+=cut
+
+sub archive_logs {
+  my ($self, @args) = @_;
+  if ($self->no_irods_archival) {
+    $self->log(q{Archival to iRODS is switched off.});
+    return ();
+  }
+  my $required_job_completion = shift @args;
+  my $ats = $self->new_with_cloned_attributes(q{npg_pipeline::archive::file::logs});
+  my @job_ids = $ats->submit_to_lsf({
+    required_job_completion => $required_job_completion,
+  });
+  return @job_ids;
+}
+
 =head2 upload_illumina_analysis_to_qc_database
 
 upload illumina analysis qc data 
@@ -133,15 +153,10 @@ sub _update_warehouse_command {
 
   my $id_run = $self->id_run;
   $command = $command ? "$command " : q[];
-  $command .= qq{$loader_name --id_run $id_run};
+  $command .= qq{$loader_name --verbose --id_run $id_run};
   my $job_name = join q{_}, $loader_name, $id_run, $self->pipeline_name;
   my $out = join q{_}, $job_name, $self->timestamp . q{.out};
   $out =  File::Spec->catfile($self->make_log_dir( $self->recalibrated_path()), $out );
-  (my $name) = __PACKAGE__ =~ /(\w+)$/smx;
-  $name = lc $name;
-  if ($self->pipeline_name eq $name) {
-    $out =~ s/\/analysis\//\/outgoing\//smx; #the job is run after the runfolder is moved to outgoing
-  }
   return q{bsub -q } . $self->lowload_lsf_queue() . qq{ $required_job_completion -J $job_name -o $out '$command'};
 }
 

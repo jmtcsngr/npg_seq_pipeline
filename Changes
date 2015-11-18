@@ -1,6 +1,67 @@
 LIST OF CHANGES
 ---------------
 
+ - pass RG paramater to illumina2bam
+ - add archive::file::logs
+
+release 49.5
+ - correctly determine path to SplitBamByChromosomes.jar
+ - drop redundant do_markduplicates and not_strip_bam_tag options from args list
+   of the old-style bam alignment script
+ - factor out generation of bam_flagstats metics into a method
+ - call new bam_flagstats execute method instead of invoking individual parsers explicitly -
+   forward compatibility
+ - npg_pipeline::cache - reuse_cache_only option added RT#486264
+ - check for an inline index when calculating index_length
+
+release 49.4
+ - LSF job creation for autoqc checks - use qc check objects directly when
+   testing whether to create a job
+
+release 49.3
+ - error if padding for spiked Phix index sequence is not long enough
+ - kill unwanted jobs efficiently (one command for all ids and -b option)
+ - call warehouse loaders with verbose option
+ - call ml warehouse loader at the end of the analysis pipeline so that the product
+   table is loaded by the time the run goes into QC thus allowing to query this
+   warehouse using run id
+ - simplified name generation for fastq files
+ - use 'subset' option of the bam_flagstast autoqc result instead
+   of the 'human_split' option
+ - allow p4 to be used where no alignment is specified for target but human
+     split (contains_nonconsented_human) is
+ - new tests for various p4 analysis options in seq_alignment
+     (20-archive_file_generation-seq_alignment.t)
+
+release 49.2.1
+ - to avoid deprecation warnings in Config::Any,
+   ensure XS extensions are available for YAML and JSON
+
+release 49.2
+ - test updates only
+
+release 49.1
+ - remove 'move_to_outgoing' step from function list for qc runs
+
+release 49.0
+ - run the archival pipeline entirely in the directory where it was started, ie
+   do not move the runnfolder to outgoing; this will be done by the staging
+   monitor
+
+release 48.9
+ - run illumina analysis loader in a lowload lsf queue
+
+release 48.8
+ - pipeline daemon - when calling the pipeline, do not use paths that are local to the host
+
+release 48.7
+ - generate  fastqcheck files for empty fastq files explicitly without
+   running fastqcheck executable, which is not available on gseq cluster
+ - daemon to process a run if machine location is unknown
+
+release 48.6
+ - force gclp analysis along the p4 route
+
 release 48.5
  - archive to a "gclp" iRODS if function_list looks like gclp variant
  - use low_load queue for upstream_tags qc (accesses tracking and qc DBs)
@@ -521,7 +582,7 @@ release 36.10
  - bug fix for tileviz and calibration_table jobs
 
 release 36.9
- - npg_pipeline::analysis::harold_calibration module depricated, its test removed
+ - npg_pipeline::analysis::harold_calibration module deprecated, its test removed
  - attributes/methods for retrieving control species reference simplified
  - removed npg_pipeline::pre_exec::references_adapters and refactored bin/npg_pipeline_preexec_references to use reference finder roles directly
  - removed npg_pipeline::roles::business::pre_exec_strings, its code integrated into npg_pipeline::roles::business::base
@@ -693,7 +754,7 @@ release-31.0
    being flexible about qc input directories
  - parallelesation of  archive_to_irods and archive_to_sra removed since archive_to_sra is not used any more
  - npg_pipeline::roles::business::base->batch method removed
- - some changes to the npg::api::lane object usage to stop using depricated methods, especially getting hardcoded references
+ - some changes to the npg::api::lane object usage to stop using deprecated methods, especially getting hardcoded references
 
  - introduction of webcache in tests to cope with npg::api::lane methods using st::api::lims object and the latest batch xml
  - explicit spidering of st modules from npg::api modules discontinued; getting references and insert sizes explicitly in spidering discontinued since this should be covered by spidering the lims objects
