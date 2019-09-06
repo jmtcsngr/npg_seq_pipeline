@@ -98,8 +98,11 @@ sub pipeline_wait4path {
   my $path = npg_pipeline::runfolder_scaffold
              ->path_in_outgoing($self->runfolder_path());
 
+  my $random_string = $self->random_string();
+
   my $command = q{bash -c '}
   ##no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
+    . qq{echo '$random_string'; }
     . qq{COUNTER=0; NUM_ITERATIONS=$NUM_MINS2WAIT; DIR=$path; STIME=60; }
     .  q{while [ $COUNTER -lt $NUM_ITERATIONS ] && ! [ -d $DIR ] ; }
     .  q{do echo $DIR not available; COUNTER=$(($COUNTER+1)); sleep $STIME; done; }
